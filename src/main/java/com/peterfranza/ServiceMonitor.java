@@ -99,8 +99,9 @@ public class ServiceMonitor {
 	}
 	
 	private boolean shouldInstall(Class<? extends Job> j) {
-		if(j.getAnnotation(RequiresArgument.class) != null) {
-			RequiresArgument req = j.getClass().getAnnotation(RequiresArgument.class);
+		RequiresArgument req = j.getClass().getAnnotation(RequiresArgument.class);
+		if(req != null) {
+			
 			System.out.println("has " + req.value() + " " + commandLine.hasOption(req.value()));
 			return commandLine.hasOption(req.value());
 		}
