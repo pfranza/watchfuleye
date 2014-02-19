@@ -1,14 +1,12 @@
 package com.peterfranza.job;
 
 import java.io.File;
-import java.net.InetAddress;
 import java.util.ArrayList;
 
 import javax.inject.Inject;
 import javax.inject.Named;
 import javax.jms.TextMessage;
 
-import org.apache.commons.configuration.Configuration;
 import org.quartz.Job;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;

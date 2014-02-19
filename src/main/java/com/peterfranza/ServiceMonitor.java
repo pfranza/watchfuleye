@@ -215,6 +215,7 @@ public class ServiceMonitor {
 		options.addOption(require(new Option("p", "password", true, "Authentication Password")));
 		options.addOption(require(new Option("e", "endpoint", true, "Broker Endpoint")));
 		options.addOption(require(new Option("h", "hostname", true, "Machines Hostname")));
+		options.addOption(multi(new Option("ws", "webservices", true, "Web Services To Moniter")));
 
 		try {		
 			return parser.parse( options, args);
@@ -223,6 +224,11 @@ public class ServiceMonitor {
 			formatter.printHelp(" ", options, true);
 			return null;
 		}
+	}
+
+	private static Option multi(Option option) {
+		option.setArgs(Option.UNLIMITED_VALUES);
+		return option;
 	}
 
 	private static Option require(Option option) {
