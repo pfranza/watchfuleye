@@ -1,0 +1,14 @@
+Machines:
+{{#records}}
+---System: {{name}}
+------File Systems: 
+{{#filesystems}}
+----------{{label}}:  {{freespace}}
+{{/filesystems}}
+
+{{/records}}
+
+Services:
+{{#services}}
+---{{name}}: {{status}}
+{{/services}}
