@@ -87,7 +87,7 @@ public class ServiceMonitor {
 					Trigger trigger = TriggerBuilder
 							.newTrigger().withIdentity(j.getClass().getSimpleName()+"TriggerId")
 							.withSchedule(CronScheduleBuilder.cronSchedule(cron.value())).build();
-					System.out.println("Schedule " + j.getClass().getSimpleName() + " @ " + interval.value() + "sec");
+					System.out.println("Schedule " + j.getClass().getSimpleName() + " @ " + cron.value());
 					scheduler.scheduleJob(jobDetail, trigger);
 				}
 			}
@@ -101,6 +101,7 @@ public class ServiceMonitor {
 	private boolean shouldInstall(Class<? extends Job> j) {
 		if(j.getAnnotation(RequiresArgument.class) != null) {
 			RequiresArgument req = j.getClass().getAnnotation(RequiresArgument.class);
+			System.out.println("has " + req.value() + " " + commandLine.hasOption(req.value()));
 			return commandLine.hasOption(req.value());
 		}
 		return true;

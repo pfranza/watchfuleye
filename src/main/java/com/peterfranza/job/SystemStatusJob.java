@@ -29,7 +29,6 @@ public class SystemStatusJob implements Job {
 			TextMessage message = sender.createMessage();
 			message.setText(collectSystemStatistics());
 			sender.send(message);  
-			System.out.println("Sent message '" + message.getText() + "'");
 		} catch (Exception e) {
 			throw new JobExecutionException(e);
 		}
