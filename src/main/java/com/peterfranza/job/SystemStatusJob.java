@@ -5,6 +5,7 @@ import java.net.InetAddress;
 import java.util.ArrayList;
 
 import javax.inject.Inject;
+import javax.inject.Named;
 import javax.jms.TextMessage;
 
 import org.apache.commons.configuration.Configuration;
@@ -22,7 +23,7 @@ import com.peterfranza.util.ScheduleInterval;
 public class SystemStatusJob implements Job {
 
 	@Inject MessageSender sender;
-	@Inject Configuration configuration;
+	@Inject @Named("hostname") String hostname;
 	
 	public void execute(JobExecutionContext context)
 			throws JobExecutionException {
@@ -38,7 +39,7 @@ public class SystemStatusJob implements Job {
 
 	public String collectSystemStatistics() throws Exception {
 		Message message = new Message();
-			message.systemName = configuration.getString("SystemName", InetAddress.getLocalHost().getHostName());
+			message.systemName = hostname;
 			ArrayList<FileSystem> list = new ArrayList<FileSystem>();
 			for(File sysDrive : File.listRoots()){
 				FileSystem f = new FileSystem();
