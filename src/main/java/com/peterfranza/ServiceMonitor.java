@@ -9,7 +9,6 @@ import java.util.Map;
 import java.util.Set;
 
 import javax.inject.Inject;
-import javax.inject.Named;
 import javax.inject.Provider;
 import javax.jms.Connection;
 import javax.jms.ConnectionFactory;
@@ -48,6 +47,7 @@ import com.google.inject.name.Names;
 import com.peterfranza.util.CronInterval;
 import com.peterfranza.util.GuiceJobFactory;
 import com.peterfranza.util.MessageSender;
+import com.peterfranza.util.RequiresArgument;
 import com.peterfranza.util.ScheduleInterval;
 import com.peterfranza.util.ServiceListener;
 import com.peterfranza.util.TasksModule;
@@ -58,7 +58,7 @@ public class ServiceMonitor {
 	
 	@Inject Provider<GuiceJobFactory> jobFactory;
 	@Inject Provider<Set<Job>> jobProvider;
-
+	@Inject CommandLine commandLine;
 	
 	public void run() throws Exception {
 	
@@ -71,23 +71,25 @@ public class ServiceMonitor {
 			JobDetail jobDetail = JobBuilder.newJob(j.getClass())
 					.withIdentity(j.getClass().getSimpleName()+"Job").build();
 
-			ScheduleInterval interval = j.getClass().getAnnotation(ScheduleInterval.class);
-			if(interval != null) {
-				Trigger trigger = TriggerBuilder
-						.newTrigger().withIdentity(j.getClass().getSimpleName()+"TriggerId")
-						.withSchedule(SimpleScheduleBuilder.simpleSchedule().withIntervalInSeconds(interval.value())
-								.repeatForever()).build();
-				System.out.println("Schedule " + j.getClass().getSimpleName() + " @ " + interval.value() + "sec");
-				scheduler.scheduleJob(jobDetail, trigger);
-			}
-			
-			CronInterval cron = j.getClass().getAnnotation(CronInterval.class);
-			if(interval != null) {
-				Trigger trigger = TriggerBuilder
-						.newTrigger().withIdentity(j.getClass().getSimpleName()+"TriggerId")
-						.withSchedule(CronScheduleBuilder.cronSchedule(cron.value())).build();
-				System.out.println("Schedule " + j.getClass().getSimpleName() + " @ " + interval.value() + "sec");
-				scheduler.scheduleJob(jobDetail, trigger);
+			if(shouldInstall(j.getClass())) {
+				ScheduleInterval interval = j.getClass().getAnnotation(ScheduleInterval.class);
+				if(interval != null) {
+					Trigger trigger = TriggerBuilder
+							.newTrigger().withIdentity(j.getClass().getSimpleName()+"TriggerId")
+							.withSchedule(SimpleScheduleBuilder.simpleSchedule().withIntervalInSeconds(interval.value())
+									.repeatForever()).build();
+					System.out.println("Schedule " + j.getClass().getSimpleName() + " @ " + interval.value() + "sec");
+					scheduler.scheduleJob(jobDetail, trigger);
+				}
+
+				CronInterval cron = j.getClass().getAnnotation(CronInterval.class);
+				if(cron != null) {
+					Trigger trigger = TriggerBuilder
+							.newTrigger().withIdentity(j.getClass().getSimpleName()+"TriggerId")
+							.withSchedule(CronScheduleBuilder.cronSchedule(cron.value())).build();
+					System.out.println("Schedule " + j.getClass().getSimpleName() + " @ " + interval.value() + "sec");
+					scheduler.scheduleJob(jobDetail, trigger);
+				}
 			}
 			
 		}
@@ -96,6 +98,14 @@ public class ServiceMonitor {
 		
 	}
 	
+	private boolean shouldInstall(Class<? extends Job> j) {
+		if(j.getAnnotation(RequiresArgument.class) != null) {
+			RequiresArgument req = j.getClass().getAnnotation(RequiresArgument.class);
+			return commandLine.hasOption(req.value());
+		}
+		return true;
+	}
+
 	public static void broker(String endpoint, String username, String password) throws Exception {
 		
 		
@@ -146,6 +156,8 @@ public class ServiceMonitor {
 			
 			@Override
 			protected void configure() {
+				
+				bind(CommandLine.class).toInstance(cmd);
 				
 				bind(String.class).annotatedWith(Names.named("endpoint")).toInstance(cmd.getOptionValue("endpoint"));
 				bind(String.class).annotatedWith(Names.named("username")).toInstance(cmd.getOptionValue("username"));

@@ -19,8 +19,10 @@ import com.github.mustachejava.DefaultMustacheFactory;
 import com.github.mustachejava.Mustache;
 import com.github.mustachejava.MustacheFactory;
 import com.peterfranza.util.CronInterval;
+import com.peterfranza.util.RequiresArgument;
 
 @CronInterval
+@RequiresArgument("mailer")
 public class ServiceMessageEmail implements Job {
 
 	public void execute(JobExecutionContext context)
