@@ -99,10 +99,8 @@ public class ServiceMonitor {
 	}
 	
 	private boolean shouldInstall(Class<? extends Job> j) {
-		RequiresArgument req = j.getClass().getAnnotation(RequiresArgument.class);
+		RequiresArgument req = j.getAnnotation(RequiresArgument.class);
 		if(req != null) {
-			
-			System.out.println("has " + req.value() + " " + commandLine.hasOption(req.value()));
 			return commandLine.hasOption(req.value());
 		}
 		return true;
@@ -149,7 +147,7 @@ public class ServiceMonitor {
         Connection connection = connectionFactory.createConnection();
         connection.start();
         
-        final Session session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
+        final Session session = connection.createSession(false, Session.CLIENT_ACKNOWLEDGE);
         Topic topic = session.createTopic("WatchfulEye-ServiceMonitor");
         final MessageProducer producer = session.createProducer(topic);
       
@@ -181,7 +179,7 @@ public class ServiceMonitor {
         
        
         
-        if(cmd.hasOption("mailer")) {
+        if(cmd.hasOption("mailer") || cmd.hasOption("verbose")) {
         	MessageConsumer consumer = session.createConsumer(topic);
         	consumer.setMessageListener(injector.getInstance(ServiceListener.class));
         }
@@ -220,7 +218,7 @@ public class ServiceMonitor {
 		options.addOption(require(new Option("h", "hostname", true, "Machines Hostname")));
 		options.addOption(multi(new Option("ws", "webservices", true, "Web Services To Moniter")));
 
-		options.addOption(require(new Option("mf", "mailfrom", true, "Address Mail Comes From (required if -mailer)")));
+		options.addOption(new Option("mf", "mailfrom", true, "Address Mail Comes From (required if -mailer)"));
 		options.addOption(multi(new Option("mt", "mailto", true, "Mail Recipients (required if -mailer)")));
 			
 		
@@ -228,11 +226,14 @@ public class ServiceMonitor {
 		try {		
 			
 			CommandLine opt = parser.parse( options, args);
-			if(opt.hasOption("mailer") && !(opt.hasOption("mf") || opt.hasOption("mt"))) {
-				throw new RuntimeException("Missing Required Options");
+			if(opt.hasOption("mailer")) {
+				if(!(opt.hasOption("mf") && opt.hasOption("mt"))) {
+					throw new RuntimeException("Missing Required Options");
+				}
 			}
 			return opt;
 		} catch(Exception e) {
+			e.printStackTrace();
 			HelpFormatter formatter = new HelpFormatter();
 			formatter.printHelp(" ", options, true);
 			return null;

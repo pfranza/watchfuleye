@@ -36,7 +36,6 @@ public class WebserviceStatusJob implements Job {
 			TextMessage message = sender.createMessage();
 			message.setText(collectSystemStatistics());
 			sender.send(message);  
-			System.out.println("Sent message '" + message.getText() + "'");
 		} catch (Exception e) {
 			throw new JobExecutionException(e);
 		}
@@ -47,8 +46,9 @@ public class WebserviceStatusJob implements Job {
 		message.systemName = hostname;
 		ArrayList<ServiceEndpoint> list = new ArrayList<ServiceEndpoint>();
 		for(String url: commandLine.getOptionValues("ws")) {
-			URL u = new URL(url.substring(url.indexOf("||") + 2));
-			System.out.println(url.substring(url.indexOf("||") + 2));
+			try {
+			URL u = new URL(url.substring(url.indexOf("=") + 1));
+			
 			HttpURLConnection connection = (HttpURLConnection)u.openConnection();
 			if(url.contains("@")) {
 				String userpass = url.substring(url.indexOf("//")+2, url.indexOf("@"));
@@ -61,9 +61,15 @@ public class WebserviceStatusJob implements Job {
 			int code = connection.getResponseCode();
 			
 			ServiceEndpoint e = new ServiceEndpoint();
-				e.label = url.substring(0, url.indexOf("||"));
+				e.label = url.substring(0, url.indexOf("="));
 				e.status = code == 200 ? "OK" : "Error:" + code;
 				list.add(e);
+			} catch (Exception ex) {
+				ServiceEndpoint e = new ServiceEndpoint();
+				e.label = url.substring(0, url.indexOf("="));
+				e.status = "Error:" + ex.getMessage();
+				list.add(e);
+			}
 		}
 		message.endpoints = list.toArray(new Message.ServiceEndpoint[0]);
 		return new Gson().toJson(message);
