@@ -29,11 +29,11 @@ public class DataManager {
 		
 		m.timestamp = System.currentTimeMillis();
 		
-		if(m.fileSystems.length > 0) {
+		if(m.fileSystems != null && m.fileSystems.length > 0) {
 			machines.put(m.systemName, m);
 		} 
 		
-		if(m.endpoints.length > 0) {
+		if(m.endpoints != null && m.endpoints.length > 0) {
 			for(ServiceEndpoint s: m.endpoints) {
 				String key = m.systemName + " => " + s.label;
 				s.label = key;
@@ -81,6 +81,7 @@ public class DataManager {
 	
 	private HealthMessage createHealthSet() {
 		HealthMessage msg = new HealthMessage();
+		System.out.println("epts: " + getServiceEndpoints().size());
 		for(ServiceEndpoint s: getServiceEndpoints()) {
 			msg.services.add(new HealthMessageRecord(s.label, s.status));
 		}
