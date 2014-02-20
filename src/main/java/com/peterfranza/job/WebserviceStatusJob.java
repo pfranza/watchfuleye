@@ -18,9 +18,11 @@ import com.google.gson.Gson;
 import com.peterfranza.job.messages.Message;
 import com.peterfranza.job.messages.Message.ServiceEndpoint;
 import com.peterfranza.util.MessageSender;
+import com.peterfranza.util.RequiresArgument;
 import com.peterfranza.util.ScheduleInterval;
 
 @ScheduleInterval(60)
+@RequiresArgument("ws")
 public class WebserviceStatusJob implements Job {
 
 	@Inject MessageSender sender;

@@ -9,6 +9,6 @@ import java.lang.annotation.Target;
 @Target(TYPE)
 public @interface CronInterval {
 
-	String value() default "0 0 6 1/1 * ? *"; 
+	String value() default "0 0 11 1/1 * ? *"; 
 	
 }

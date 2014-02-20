@@ -5,6 +5,7 @@ public class Message {
 	public String systemName;
 	public FileSystem[] fileSystems;
 	public ServiceEndpoint[] endpoints;
+	public transient long timestamp;
 	
 	
 	public static class FileSystem {

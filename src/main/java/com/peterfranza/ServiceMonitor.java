@@ -211,6 +211,7 @@ public class ServiceMonitor {
 		Options options = new Options();
 		options.addOption(new Option("b", "broker", false, "Start a Message Broker"));
 		options.addOption("mailer", false, "Start the mailer task");
+		options.addOption("verbose", false, "Print Status to Console Every Minute");
 		options.addOption("monitor", false, "Monitor the current system");
 		
 		options.addOption(require(new Option("u", "username", true, "Authentication Username")));
@@ -219,8 +220,18 @@ public class ServiceMonitor {
 		options.addOption(require(new Option("h", "hostname", true, "Machines Hostname")));
 		options.addOption(multi(new Option("ws", "webservices", true, "Web Services To Moniter")));
 
+		options.addOption(require(new Option("mf", "mailfrom", true, "Address Mail Comes From (required if -mailer)")));
+		options.addOption(multi(new Option("mt", "mailto", true, "Mail Recipients (required if -mailer)")));
+			
+		
+
 		try {		
-			return parser.parse( options, args);
+			
+			CommandLine opt = parser.parse( options, args);
+			if(opt.hasOption("mailer") && !(opt.hasOption("mf") || opt.hasOption("mt"))) {
+				throw new RuntimeException("Missing Required Options");
+			}
+			return opt;
 		} catch(Exception e) {
 			HelpFormatter formatter = new HelpFormatter();
 			formatter.printHelp(" ", options, true);
