@@ -81,7 +81,6 @@ public class DataManager {
 	
 	private HealthMessage createHealthSet() {
 		HealthMessage msg = new HealthMessage();
-		System.out.println("epts: " + getServiceEndpoints().size());
 		for(ServiceEndpoint s: getServiceEndpoints()) {
 			msg.services.add(new HealthMessageRecord(s.label, s.status));
 		}

@@ -65,7 +65,6 @@ public class ServiceMonitor {
 		SchedulerFactory schedulerFactory = new StdSchedulerFactory();
 		Scheduler scheduler = schedulerFactory.getScheduler();
 		scheduler.setJobFactory(jobFactory.get());
-		
 		for(Job j: jobProvider.get()) {
 						
 			JobDetail jobDetail = JobBuilder.newJob(j.getClass())
@@ -184,9 +183,7 @@ public class ServiceMonitor {
         	consumer.setMessageListener(injector.getInstance(ServiceListener.class));
         }
         
-        if (cmd.hasOption("monitor")) {
-        	injector.getInstance(ServiceMonitor.class).run();
-        }
+        injector.getInstance(ServiceMonitor.class).run();
         
         while(running) {Thread.sleep(10000);}
         System.out.println("Exiting");
