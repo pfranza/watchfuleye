@@ -68,7 +68,7 @@ public class DataManager {
 	}
 
 	public boolean isRecordCurrent(Message m) {
-		return m.timestamp >= System.currentTimeMillis() - TimeUnit.MINUTES.convert(10, TimeUnit.MILLISECONDS);
+		return m.timestamp >= System.currentTimeMillis() - TimeUnit.MILLISECONDS.convert(10, TimeUnit.MINUTES);
 	}
 	
 	public String getHealthMessage() throws Exception {		
@@ -138,5 +138,4 @@ public class DataManager {
 		
 	}
 	
-
 }
