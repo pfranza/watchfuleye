@@ -6,11 +6,10 @@
 # processname: watchfuleye
 
 SERVICE_NAME=watchfuleye
-BROKER="tcp://localhost:7896"
-ARGUMENTS="-e $BROKER -u username -p password -h $HOSTNAME -monitor"
+ARGUMENTS=`xargs -a /etc/watchfuleye.conf`
 
-
-PATH_TO_JAR="/root/watchfuleye/watchfuleye.jar $ARGUMENTS"
+echo "STARTUNG WITH: $ARGUMENTS"
+PATH_TO_JAR="/root/watchfuleye/watchfuleye.jar -h $HOSTNAME $ARGUMENTS"
 PID_PATH_NAME=/tmp/watchfuleye-pid
 case $1 in
     start)
