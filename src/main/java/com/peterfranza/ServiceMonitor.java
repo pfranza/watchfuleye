@@ -124,6 +124,7 @@ public class ServiceMonitor {
 		broker.setPlugins(new BrokerPlugin[]{auth});
 		broker.addConnector(endpoint);
 		broker.setPersistent(false);
+		broker.setBrokerName(ServiceMonitor.class.getSimpleName());
 		broker.start();
 		System.out.println("Broker Started " + endpoint);
 	}
@@ -136,15 +137,28 @@ public class ServiceMonitor {
 		final CommandLine cmd = setupCommandLine(args);
 		if(cmd == null) {return;}
 		
+		String brokerendpoint = cmd.getOptionValue("endpoint");
+		String endpoint = cmd.getOptionValue("endpoint");
 		
-		if(cmd.hasOption("broker")) {
-	       broker(cmd.getOptionValue("endpoint"), cmd.getOptionValue("username"), cmd.getOptionValue("password"));
-	       Thread.sleep(1000);
+		if(!endpoint.contains("://")) {
+			brokerendpoint = "tcp://" + brokerendpoint;
+			endpoint = "tcp://" + endpoint;
 		}
 		
-		ConnectionFactory connectionFactory = new ActiveMQConnectionFactory(cmd.getOptionValue("username"), cmd.getOptionValue("password"), cmd.getOptionValue("endpoint"));
+		if(cmd.hasOption("broker")) {
+	       broker(brokerendpoint, cmd.getOptionValue("username"), cmd.getOptionValue("password"));
+	       Thread.sleep(1000); 
+		} 
+		
+		if(!endpoint.toLowerCase().contains("failover")) {
+			endpoint = "failover:("+endpoint+")";
+		}
+		
+		System.out.print("Connecting to: " + endpoint);
+		ConnectionFactory connectionFactory = new ActiveMQConnectionFactory(cmd.getOptionValue("username"), cmd.getOptionValue("password"), endpoint);
         Connection connection = connectionFactory.createConnection();
         connection.start();
+        System.out.println(" ... done.");
         
         final Session session = connection.createSession(false, Session.CLIENT_ACKNOWLEDGE);
         Topic topic = session.createTopic("WatchfulEye-ServiceMonitor");
