@@ -114,31 +114,58 @@ public class ServiceMonitor {
 		return true;
 	}
 
-	public static Registration broker(final String endpoint, String username, String password) throws Exception {
+	public static Registration broker(final String endpoint, final String username, final String password) throws Exception {
 		
-		
-		SimpleAuthenticationPlugin auth = new SimpleAuthenticationPlugin();
-		auth.setAnonymousAccessAllowed(false);
-
-		HashMap<String, String> users = new HashMap<String, String>();	
-		users.put(username, password);
-
-		Map<String, Set<Principal>> userGroups = new HashMap<String, Set<Principal>>();
-			userGroups.put(username, new HashSet<Principal>());
-		
-		auth.setUserPasswords(users);
-		auth.setUserGroups(userGroups);
-
-		final BrokerService broker = new BrokerService();
-		broker.setPlugins(new BrokerPlugin[]{auth});
-		broker.addConnector(endpoint);
-		broker.setPersistent(false);
-		broker.setBrokerName(ServiceMonitor.class.getSimpleName());
-		broker.start();
-		System.out.println("Broker Started " + endpoint);
 		return new Registration() {
+			
+			BrokerService broker = new BrokerService();
+			boolean running = true;
+			
+			{
+				new Thread(new Runnable() {
+					
+					public void run() {
+						try {
+							while(running) {
+
+								final SimpleAuthenticationPlugin auth = new SimpleAuthenticationPlugin();
+								auth.setAnonymousAccessAllowed(false);
+
+								HashMap<String, String> users = new HashMap<String, String>();	
+								users.put(username, password);
+
+								Map<String, Set<Principal>> userGroups = new HashMap<String, Set<Principal>>();
+								userGroups.put(username, new HashSet<Principal>());
+
+								auth.setUserPasswords(users);
+								auth.setUserGroups(userGroups);
+
+								broker.setPlugins(new BrokerPlugin[]{auth});
+
+								broker.setTransportConnectorURIs(new String[]{endpoint});
+								broker.setPersistent(false);
+								broker.setBrokerName(ServiceMonitor.class.getSimpleName());
+								broker.start();
+
+								System.out.println("Broker Started " + endpoint);
+								Thread.sleep(TimeUnit.HOURS.toMillis(1));
+								broker.stop();
+								broker.waitUntilStopped();
+								System.out.println("Broker Recycling");
+								broker = new BrokerService();
+								Thread.sleep(2000);
+							}
+						} catch(Exception e) {}
+					}
+				}).start();
+				broker.waitUntilStarted();
+			}
+			
 			public void unregister() {
-				try {broker.stop();
+				try {
+					running= false;
+					broker.stop();
+					broker.waitUntilStopped();
 				} catch (Exception e) {}
 				System.out.println("Broker Stopped " + endpoint);
 			}
@@ -161,7 +188,7 @@ public class ServiceMonitor {
 			endpoint = "tcp://" + endpoint;
 		}
 		
-		long recycle = Long.valueOf(cmd.getOptionValue("recycle", "7"));
+		long recycle = Long.valueOf(cmd.getOptionValue("recycle", "72"));
 		
 		ArrayList<Registration> registrations = new ArrayList<Registration>();
 		while(running) {
