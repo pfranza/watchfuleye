@@ -1,5 +1,7 @@
 package com.peterfranza.job;
 
+import java.util.concurrent.TimeUnit;
+
 import javax.inject.Inject;
 
 import org.apache.commons.cli.CommandLine;
@@ -21,6 +23,7 @@ public class ServiceStatusPrinter implements Job {
 	public void execute(JobExecutionContext context)
 			throws JobExecutionException {
 		try {
+			Thread.sleep(TimeUnit.SECONDS.toMillis(65));
 			System.out.println(dataManager.getHealthMessage());
 		} catch (Exception e) {
 			throw new JobExecutionException(e); 

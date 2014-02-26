@@ -1,6 +1,7 @@
 package com.peterfranza.job;
 
 import java.util.Properties;
+import java.util.concurrent.TimeUnit;
 
 import javax.inject.Inject;
 import javax.mail.Message;
@@ -28,6 +29,7 @@ public class ServiceMessageEmail implements Job {
 	public void execute(JobExecutionContext context)
 			throws JobExecutionException {
 		try {
+			Thread.sleep(TimeUnit.SECONDS.toMillis(65));
 			Properties props = new Properties();
 	        Session session = Session.getDefaultInstance(props, null);
 			

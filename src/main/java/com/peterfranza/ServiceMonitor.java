@@ -3,10 +3,12 @@ package com.peterfranza;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.security.Principal;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import javax.inject.Inject;
 import javax.inject.Provider;
@@ -47,6 +49,7 @@ import com.google.inject.name.Names;
 import com.peterfranza.util.CronInterval;
 import com.peterfranza.util.GuiceJobFactory;
 import com.peterfranza.util.MessageSender;
+import com.peterfranza.util.Registration;
 import com.peterfranza.util.RequiresArgument;
 import com.peterfranza.util.ScheduleInterval;
 import com.peterfranza.util.ServiceListener;
@@ -60,10 +63,10 @@ public class ServiceMonitor {
 	@Inject Provider<Set<Job>> jobProvider;
 	@Inject CommandLine commandLine;
 	
-	public void run() throws Exception {
+	public Registration run() throws Exception {
 	
 		SchedulerFactory schedulerFactory = new StdSchedulerFactory();
-		Scheduler scheduler = schedulerFactory.getScheduler();
+		final Scheduler scheduler = schedulerFactory.getScheduler();
 		scheduler.setJobFactory(jobFactory.get());
 		for(Job j: jobProvider.get()) {
 						
@@ -94,7 +97,13 @@ public class ServiceMonitor {
 		}
 		
 		scheduler.start();
-		
+		return new Registration() {
+			public void unregister() {
+				try {scheduler.shutdown();
+				} catch (Exception e) {}
+				System.out.println("Schedular Stopped");
+			}
+		};
 	}
 	
 	private boolean shouldInstall(Class<? extends Job> j) {
@@ -105,7 +114,7 @@ public class ServiceMonitor {
 		return true;
 	}
 
-	public static void broker(String endpoint, String username, String password) throws Exception {
+	public static Registration broker(final String endpoint, String username, String password) throws Exception {
 		
 		
 		SimpleAuthenticationPlugin auth = new SimpleAuthenticationPlugin();
@@ -120,13 +129,20 @@ public class ServiceMonitor {
 		auth.setUserPasswords(users);
 		auth.setUserGroups(userGroups);
 
-		BrokerService broker = new BrokerService();
+		final BrokerService broker = new BrokerService();
 		broker.setPlugins(new BrokerPlugin[]{auth});
 		broker.addConnector(endpoint);
 		broker.setPersistent(false);
 		broker.setBrokerName(ServiceMonitor.class.getSimpleName());
 		broker.start();
 		System.out.println("Broker Started " + endpoint);
+		return new Registration() {
+			public void unregister() {
+				try {broker.stop();
+				} catch (Exception e) {}
+				System.out.println("Broker Stopped " + endpoint);
+			}
+		};
 	}
 	
 	/**
@@ -145,63 +161,93 @@ public class ServiceMonitor {
 			endpoint = "tcp://" + endpoint;
 		}
 		
-		if(cmd.hasOption("broker")) {
-	       broker(brokerendpoint, cmd.getOptionValue("username"), cmd.getOptionValue("password"));
-	       Thread.sleep(1000); 
-		} 
+		long recycle = Long.valueOf(cmd.getOptionValue("recycle", "7"));
 		
-		if(!endpoint.toLowerCase().contains("failover")) {
-			endpoint = "failover:("+endpoint+")";
-		}
-		
-		System.out.print("Connecting to: " + endpoint);
-		ConnectionFactory connectionFactory = new ActiveMQConnectionFactory(cmd.getOptionValue("username"), cmd.getOptionValue("password"), endpoint);
-        Connection connection = connectionFactory.createConnection();
-        connection.start();
-        System.out.println(" ... done.");
-        
-        final Session session = connection.createSession(false, Session.CLIENT_ACKNOWLEDGE);
-        Topic topic = session.createTopic("WatchfulEye-ServiceMonitor");
-        final MessageProducer producer = session.createProducer(topic);
-      
-    
-        Injector injector = Guice.createInjector(new TasksModule(), new AbstractModule() {
-			
-			@Override
-			protected void configure() {
-				
-				bind(CommandLine.class).toInstance(cmd);
-				
-				bind(String.class).annotatedWith(Names.named("endpoint")).toInstance(cmd.getOptionValue("endpoint"));
-				bind(String.class).annotatedWith(Names.named("username")).toInstance(cmd.getOptionValue("username"));
-				bind(String.class).annotatedWith(Names.named("password")).toInstance(cmd.getOptionValue("password"));
-				bind(String.class).annotatedWith(Names.named("hostname")).toInstance(cmd.getOptionValue("hostname", getHostName()));
-				
-				bind(MessageSender.class).toInstance(new MessageSender() {
-					
-					public void send(TextMessage message) throws Exception{
-						producer.send(message);
-					}
-					
-					public TextMessage createMessage() throws Exception {
-						return session.createTextMessage();
+		ArrayList<Registration> registrations = new ArrayList<Registration>();
+		while(running) {
+
+			try { 
+
+				for(Registration registration: registrations) {
+					registration.unregister();
+				}
+				registrations.clear();
+
+				if(cmd.hasOption("broker")) {
+					registrations.add(broker(brokerendpoint, cmd.getOptionValue("username"), cmd.getOptionValue("password")));
+					Thread.sleep(1000); 
+				} 
+
+				if(!endpoint.toLowerCase().contains("failover")) {
+					endpoint = "failover:("+endpoint+")";
+				}
+
+				System.out.print("Connecting to: " + endpoint);
+				final ConnectionFactory connectionFactory = new ActiveMQConnectionFactory(cmd.getOptionValue("username"), cmd.getOptionValue("password"), endpoint);
+				final Connection connection = connectionFactory.createConnection();
+				connection.start();
+				System.out.println(" ... done.");
+
+				final Session session = connection.createSession(false, Session.CLIENT_ACKNOWLEDGE);
+				Topic topic = session.createTopic("WatchfulEye-ServiceMonitor");
+				final MessageProducer producer = session.createProducer(topic);
+
+
+				Injector injector = Guice.createInjector(new TasksModule(), new AbstractModule() {
+
+					@Override
+					protected void configure() {
+
+						bind(CommandLine.class).toInstance(cmd);
+
+						bind(String.class).annotatedWith(Names.named("endpoint")).toInstance(cmd.getOptionValue("endpoint"));
+						bind(String.class).annotatedWith(Names.named("username")).toInstance(cmd.getOptionValue("username"));
+						bind(String.class).annotatedWith(Names.named("password")).toInstance(cmd.getOptionValue("password"));
+						bind(String.class).annotatedWith(Names.named("hostname")).toInstance(cmd.getOptionValue("hostname", getHostName()));
+
+						bind(MessageSender.class).toInstance(new MessageSender() {
+
+							public void send(TextMessage message) throws Exception{
+								producer.send(message);
+							}
+
+							public TextMessage createMessage() throws Exception {
+								return session.createTextMessage();
+							}
+						});
 					}
 				});
+
+
+
+				if(cmd.hasOption("mailer") || cmd.hasOption("verbose")) {
+					MessageConsumer consumer = session.createConsumer(topic);
+					consumer.setMessageListener(injector.getInstance(ServiceListener.class));
+				}
+
+				registrations.add(injector.getInstance(ServiceMonitor.class).run());
+
+				registrations.add(new Registration() {
+
+					public void unregister() {
+						try {
+							producer.close();
+							session.close();
+							connection.close();
+							System.out.println("Closing JMS Connection");
+						} catch(Exception e){}
+					}
+				});
+
+				Thread.sleep(TimeUnit.HOURS.toMillis(recycle));
+				System.out.println("Recycling Connections");
+			} catch(Exception e) {
+				e.printStackTrace();
 			}
-		});
+
+		}
         
-       
         
-        if(cmd.hasOption("mailer") || cmd.hasOption("verbose")) {
-        	MessageConsumer consumer = session.createConsumer(topic);
-        	consumer.setMessageListener(injector.getInstance(ServiceListener.class));
-        }
-        
-        injector.getInstance(ServiceMonitor.class).run();
-        
-        while(running) {Thread.sleep(10000);}
-        System.out.println("Exiting");
-        connection.close();
 	}
 
 	protected static String getHostName() {
@@ -222,6 +268,7 @@ public class ServiceMonitor {
 		options.addOption("mailer", false, "Start the mailer task");
 		options.addOption("verbose", false, "Print Status to Console Every Minute");
 		options.addOption("monitor", false, "Monitor the current system");
+		options.addOption("recycle", true, "How often system recycles connections");
 		
 		options.addOption(require(new Option("u", "username", true, "Authentication Username")));
 		options.addOption(require(new Option("p", "password", true, "Authentication Password")));

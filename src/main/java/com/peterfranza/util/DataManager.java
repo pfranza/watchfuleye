@@ -35,7 +35,7 @@ public class DataManager {
 		
 		if(m.endpoints != null && m.endpoints.length > 0) {
 			for(ServiceEndpoint s: m.endpoints) {
-				String key = m.systemName + " => " + s.label;
+				String key = m.systemName + " -- " + s.label;
 				s.label = key;
 				endpoints.put(key, s);
 			}	
